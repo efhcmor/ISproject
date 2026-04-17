@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Wordle Copycat Pro</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #121213;
+        color: white;
+        text-align: center;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1 { letter-spacing: 2px; }
+
+    #stats {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        text-align: right;
+        font-size: 14px;
+        color: #ddd;
+    }
+
+    #board {
+        display: grid;
+        grid-template-rows: repeat(6, 1fr);
+        gap: 5px;
+        width: 300px;
+        margin: 40px auto 20px;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
+    }
+
+    .tile {
+        width: 50px;
+        height: 50px;
+        border: 2px solid #3a3a3c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        text-transform: uppercase;
+        background: #121213;
+    }
+
+    .correct { background: #538d4e; border-color: #538d4e; }
+    .present { background: #b59f3b; border-color: #b59f3b; }
+    .absent { background: #3a3a3c; border-color: #3a3a3c; }
+
+    #popup {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        color: black;
+        padding: 10px;
+        border-radius: 5px;
+        display: none;
+        font-weight: bold;
+    }
+
+    /* KEYBOARD */
+    #keyboard {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 500px;
+        margin: auto;
+    }
+
+    .key {
+        width: 32px;
+        height: 40px;
+        margin: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #818384;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        text-transform: uppercase;
+        user-select: none;
+    }
+
+    .key.wide { width: 80px; font-size: 14px; }
+
+    .key.correct { background: #538d4e !important; }
+    .key.present { background: #b59f3b !important; }
+    .key.absent { background: #3a3a3c !important; }
+</style>
+</head>
+
+<body>
+
+<h1>WORDLE</h1>
+
+<div id="stats">
+    Wins: <span id="wins">0</span><br>
+    Streak: <span id="streak">0</span>
+</div>
+
+<div id="popup"></div>
+<div id="board"></div>
+<div id="keyboard"></div>
+
+<script>
+const WORDS = ["apple","brain","crane","slate","brick","flame","grape","stone","plant","light","sound","water"];
+let answer = WORDS[Math.floor(Math.random() * WORDS.length)];
+
+let wins = 0;
+let streak = 0;
+
+const board = document.getElementById("board");
+const keyboard = document.getElementById("keyboard");
+const popup = document.getElementById("popup");
+
+const winsEl = document.getElementById("wins");
+const streakEl = document.getElementById("streak");
+
+let currentRow = 0;
+let currentTile = 0;
+let gameOver = false;
+
+/* BOARD */
+for (let i = 0; i < 6; i++) {
+    const row = document.createElement("div");
+    row.classList.add("row");
+
+    for (let j = 0; j < 5; j++) {
+        const tile = document.createElement("div");
+        tile.classList.add("tile");
+        row.appendChild(tile);
+    }
+
+    board.appendChild(row);
+}
+
+/* KEYBOARD */
+const letters = "abcdefghijklmnopqrstuvwxyz".split("");
+
+let keyMap = {}; // store references to keys
+
+letters.forEach(k => {
+    const key = document.createElement("div");
+    key.classList.add("key");
+    key.textContent = k;
+    key.onclick = () => handleKey(k);
+
+    keyMap[k] = key;
+
+    keyboard.appendChild(key);
+});
+
+/* BACKSPACE */
+const back = document.createElement("div");
+back.classList.add("key", "wide");
+back.textContent = "⌫";
+back.onclick = removeLetter;
+keyboard.appendChild(back);
+
+/* RESTART */
+const restart = document.createElement("div");
+restart.classList.add("key", "wide");
+restart.textContent = "↻";
+restart.onclick = () => location.reload();
+keyboard.appendChild(restart);
+
+/* INPUT */
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") checkWord();
+    else if (e.key === "Backspace") removeLetter();
+    else handleKey(e.key);
+});
+
+function handleKey(key) {
+    if (gameOver) return;
+    if (!/^[a-zA-Z]$/.test(key)) return;
+
+    const row = board.children[currentRow];
+    if (currentTile < 5) {
+        row.children[currentTile].textContent = key.toLowerCase();
+        currentTile++;
+    }
+}
+
+function removeLetter() {
+    if (currentTile > 0) {
+        currentTile--;
+        board.children[currentRow].children[currentTile].textContent = "";
+    }
+}
+
+function showPopup(msg) {
+    popup.textContent = msg;
+    popup.style.display = "block";
+    setTimeout(() => popup.style.display = "none", 2000);
+}
+
+/* WORD CHECK */
+async function isRealWord(word) {
+    try {
+        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+/* 🔥 FIXED KEYBOARD COLOR LOGIC */
+function updateKey(letter, status) {
+    const key = keyMap[letter];
+
+    if (!key) return;
+
+    // priority: correct > present > absent
+    if (status === "correct") {
+        key.classList.remove("present", "absent");
+        key.classList.add("correct");
+    }
+    else if (status === "present") {
+        if (!key.classList.contains("correct")) {
+            key.classList.add("present");
+        }
+    }
+    else if (status === "absent") {
+        if (!key.classList.contains("correct") && !key.classList.contains("present")) {
+            key.classList.add("absent");
+        }
+    }
+}
+
+async function checkWord() {
+    if (currentTile < 5) {
+        showPopup("Not enough letters!");
+        return;
+    }
+
+    const row = board.children[currentRow];
+
+    let guess = "";
+    for (let i = 0; i < 5; i++) {
+        guess += row.children[i].textContent;
+    }
+
+    guess = guess.toLowerCase();
+
+    const valid = await isRealWord(guess);
+
+    if (!valid) {
+        showPopup("Not a real word. Try again!");
+        row.classList.add("shake");
+        setTimeout(() => row.classList.remove("shake"), 400);
+        return;
+    }
+
+    let answerArr = answer.split("");
+    let guessArr = guess.split("");
+    let result = Array(5).fill("absent");
+
+    for (let i = 0; i < 5; i++) {
+        if (guessArr[i] === answerArr[i]) {
+            result[i] = "correct";
+            answerArr[i] = null;
+            guessArr[i] = null;
+        }
+    }
+
+    for (let i = 0; i < 5; i++) {
+        if (guessArr[i] && answerArr.includes(guessArr[i])) {
+            result[i] = "present";
+            answerArr[answerArr.indexOf(guessArr[i])] = null;
+        }
+    }
+
+    for (let i = 0; i < 5; i++) {
+        const tile = row.children[i];
+        tile.classList.add(result[i]);
+
+        updateKey(tile.textContent, result[i]);
+    }
+
+    if (guess === answer) {
+        wins++;
+        streak++;
+        winsEl.textContent = wins;
+        streakEl.textContent = streak;
+        showPopup("You Win!");
+        gameOver = true;
+        return;
+    }
+
+    currentRow++;
+    currentTile = 0;
+
+    if (currentRow === 6) {
+        streak = 0;
+        streakEl.textContent = streak;
+        showPopup("Game Over! Word was: " + answer);
+        gameOver = true;
+    }
+}
+</script>
+
+</body>
+</html>

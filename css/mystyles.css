@@ -1,0 +1,88 @@
+/* A custom background color or background image */
+/* You also need to link to (and apply) a stylesheet that you have created from scratch. This stylesheet should include: */
+/* At least four style definitions (it is possible you will have many more than four styles) */
+/* Styles that specify font color */
+/* Styles that specify font family */
+/* At least three divs for positioning and styling blocks of content in the HTML page */
+
+/* Background and the font */
+body {
+    background-color: #f0f4f8; 
+    font-family: Arial, Helvetica, sans-serif; 
+    color: #333; 
+    margin: 0;
+}
+
+/* Navigation */
+.navbar {
+    background-color: #333;
+    padding: 15px;
+    text-align: center;
+}
+
+/* Navbar links */
+.navbar a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 18px;
+    font-family: Arial, sans-serif;
+}
+
+/* Hover effect */
+.navbar a:hover {
+    color: #4a90e2;
+}
+
+/* Header */
+.header {
+    background-color: #4a90e2;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Image  */
+.image-section {
+    text-align: center;
+    margin: 20px;
+}
+
+/* Timeline */
+.timeline {
+    background-color: white;
+    margin: 20px;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+/* Video */
+.video {
+    text-align: center;
+    margin: 20px;
+}
+
+/* Tableau */
+.tableau {
+    background-color: #e6f0ff;
+    margin: 20px;
+    padding: 20px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+/* Footer */
+.footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 15px;
+}
+
+.footer a {
+    color: white;
+}
+
+.footer a:visited {
+    color: white;
+}
